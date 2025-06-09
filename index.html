@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ライブ練習日程調整アプリ</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --surface-color: #ffffff;
+            --text-color: #212529;
+            --text-muted-color: #6c757d;
+            --border-color: #dee2e6;
+            --gradient-start: #a0d8ef;
+            --gradient-end: #bfa3f3;
+            --primary-text-on-gradient: #ffffff;
+            --danger-color: #dc3545;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --border-radius: 0.5rem; /* 8px */
+            --spacing-unit: 1rem; /* 16px */
+            --box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            --box-shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.175);
+        }
+        *, *::before, *::after { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { 
+            font-family: var(--font-family); margin: 0; padding: 0; 
+            background-color: var(--bg-color); color: var(--text-color); 
+            font-size: 16px; line-height: 1.6;
+            display: flex; flex-direction: column; min-height: 100vh;
+        }
+        .app-wrapper {
+            width: 100%; max-width: 1200px; 
+            margin: 0 auto; padding: calc(var(--spacing-unit) * 1.5);
+            flex-grow: 1;
+        }
+        .container { 
+            background-color: var(--surface-color); 
+            padding: calc(var(--spacing-unit) * 1.5); 
+            border-radius: var(--border-radius); 
+            box-shadow: var(--box-shadow); 
+            margin-bottom: calc(var(--spacing-unit) * 1.5);
+            border: 1px solid var(--border-color);
+        }
+        h1, h2, h3, h4 { 
+            margin-top: 0; margin-bottom: var(--spacing-unit);
+            line-height: 1.3; font-weight: 600;
+        }
+        h1 { font-size: 2em; background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        h2 { font-size: 1.75em; color: #343a40; }
+        h3 { font-size: 1.5em; }
+        h4 { font-size: 1.25em; color: var(--text-muted-color); }
+
+        label {
+            display: block; margin-bottom: calc(var(--spacing-unit) * 0.4);
+            font-weight: 500; color: var(--text-muted-color); font-size: 0.9rem;
+        }
+        .input-wrapper { position: relative; }
+        input[type="text"], input[type="password"], input[type="date"], input[type="number"], select {
+            width: 100%; padding: calc(var(--spacing-unit) * 0.75);
+            margin-bottom: var(--spacing-unit); border: 1px solid var(--border-color);
+            border-radius: var(--border-radius); font-size: 1rem;
+            background-color: #fdfdff; color: var(--text-color);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .password-toggle-icon {
+            position: absolute; top: 22px; right: 12px;
+            transform: translateY(-50%); cursor: pointer;
+            color: var(--text-muted-color); user-select: none;
+            width: 20px; height: 20px;
+        }
+        .password-toggle-icon svg { width: 100%; height: 100%; }
+
+        input[type="text"]:focus, input[type="password"]:focus, input[type="date"]:focus, input[type="number"]:focus, select:focus {
+            outline: none; border-color: var(--gradient-start);
+            box-shadow: 0 0 0 0.2rem rgba(160, 216, 239, 0.35);
+        }
+        input::placeholder { color: #adb5bd; }
+
+        button {
+            background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
+            color: var(--primary-text-on-gradient); 
+            padding: calc(var(--spacing-unit) * 0.75) calc(var(--spacing-unit) * 1.5);
+            border: none; border-radius: var(--border-radius); 
+            cursor: pointer; font-size: 1rem; font-weight: 500;
+            transition: all 0.2s ease;
+            display: inline-flex; align-items: center; justify-content: center;
+            gap: calc(var(--spacing-unit) * 0.5);
+            box-shadow: var(--box-shadow); text-shadow: 0 1px 1px rgba(0,0,0,0.1);
+        }
+        button:hover { filter: brightness(1.05); transform: translateY(-2px); box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.1); }
+        button:active { transform: translateY(0); filter: brightness(0.95); }
+        button.secondary { background: var(--surface-color); color: var(--text-muted-color); border: 1px solid var(--border-color); text-shadow: none;}
+        button.secondary:hover { background: #e9ecef; color: var(--text-color); border-color: #ced4da; }
+        button.danger { background: var(--danger-color); }
+        button.danger:hover { filter: brightness(1.1); background: var(--danger-color); }
+
+        .hidden { display: none !important; }
+
+        #main-app-header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: calc(var(--spacing-unit) * 1.5); flex-wrap: wrap;
+            padding-bottom: var(--spacing-unit); border-bottom: 1px solid var(--border-color);
+        }
+        #main-app-header h2 {
+            margin-bottom: 0; font-size: 1.5em; 
+            background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            font-weight: 600;
+        }
+        #hamburger-menu { 
+            font-size: 1.8rem; cursor: pointer; padding: calc(var(--spacing-unit) * 0.5);
+            border-radius: var(--border-radius); transition: background-color 0.2s ease;
+            color: var(--text-muted-color);
+        }
+        #hamburger-menu:hover { background-color: rgba(0,0,0,0.05); color: var(--text-color); }
+        #menu-dropdown {
+            position: absolute; top: 80px; right: calc(var(--spacing-unit) * 1.5); 
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color); border-radius: var(--border-radius); 
+            box-shadow: var(--box-shadow-lg); z-index: 1000; padding: var(--spacing-unit);
+            width: 250px;
+        }
+        #menu-dropdown button { 
+            display: block; width: 100%; text-align: left; 
+            margin-bottom: calc(var(--spacing-unit) * 0.5); background: transparent; 
+            color: var(--text-color); padding: calc(var(--spacing-unit) * 0.75);
+            box-shadow: none;
+        }
+        #menu-dropdown button:hover { background-color: #f8f9fa; transform: none; }
+        #menu-dropdown button:last-child { margin-bottom: 0; }
+        #menu-dropdown button.danger { background-color: transparent; color: var(--danger-color); }
+        #menu-dropdown button.danger:hover { background-color: var(--danger-color); color: white; }
+
+        #add-song-btn {
+            position: fixed; bottom: calc(var(--spacing-unit) * 1.5); right: calc(var(--spacing-unit) * 1.5);
+            width: 56px; height: 56px;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            color: var(--primary-text-on-gradient); border-radius: 50%; 
+            font-size: 1.75rem; line-height: 56px; text-align: center; 
+            cursor: pointer; box-shadow: 0 0.25rem 1rem rgba(0,0,0,0.15);
+            z-index: 999;
+            transition: all 0.2s ease;
+        }
+        #add-song-btn:hover { transform: scale(1.1) rotate(15deg); box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.2); filter: brightness(1.05); }
+        
+        .modal { position: fixed; z-index: 1001; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; padding: var(--spacing-unit); }
+        .modal.show { display: flex; }
+        .modal-content { background-color: var(--surface-color); margin: auto; padding: calc(var(--spacing-unit) * 1.5); border: 1px solid var(--border-color); width: 100%; max-width: 500px; border-radius: var(--border-radius); box-shadow: var(--box-shadow-lg); position: relative; }
+        .close-modal { position: absolute; top: calc(var(--spacing-unit) * 0.5); right: calc(var(--spacing-unit) * 0.75); color: var(--text-muted-color); font-size: 1.75rem; font-weight: bold; cursor: pointer; line-height: 1; padding: calc(var(--spacing-unit) * 0.25) calc(var(--spacing-unit) * 0.5); background: none; border: none; }
+        .close-modal:hover { color: var(--text-color); }
+        .message-area { padding: var(--spacing-unit); margin-bottom: var(--spacing-unit); border-radius: var(--border-radius); font-weight: 500; border-width: 1px; border-style: solid; }
+        .error-message { color: var(--danger-color); background-color: #f8d7da; border-color: #f5c2c7; }
+        .info-message { color: var(--success-color); background-color: #d1e7dd; border-color: #badbcc; }
+        hr { margin: calc(var(--spacing-unit) * 1.5) 0; border: 0; border-top: 1px solid var(--border-color); }
+        
+        #view-user-info-modal .info-item, #edit-user-info-modal .info-item { margin-bottom: var(--spacing-unit); }
+        .info-item strong { color: var(--text-muted-color); display: block; font-size: 0.9em; }
+        .info-value, #view-password-readonly { font-size: 1.1em; word-wrap: break-word; }
+        .password-view-wrapper { position: relative; }
+        #view-password-readonly { border: none; background-color: transparent; padding: 0; width: calc(100% - 30px); }
+        #view-user-info-modal .password-toggle-icon { top: 12px; }
+
+        #availability-table-wrapper{overflow:auto;max-height:70vh;margin:calc(var(--spacing-unit)*1.5) 0;border:1px solid var(--border-color);border-radius:var(--border-radius);position:relative;background-color:var(--surface-color)}#availability-table{width:100%;min-width:800px;border-collapse:separate;border-spacing:0}#availability-table th,#availability-table td{border-bottom:1px solid var(--border-color);border-right:1px solid var(--border-color);padding:calc(var(--spacing-unit)*.6);text-align:center;font-size:.875rem;min-width:90px;white-space:nowrap}#availability-table th:first-child,#availability-table td:first-child{border-left:none}#availability-table tr:first-child th{border-top:none}#availability-table tr td:last-child,#availability-table tr th:last-child{border-right:none}#availability-table tr:last-child td{border-bottom:none}#availability-table thead th{background-color:#f8f9fa;color:var(--text-color);font-weight:600;position:sticky;top:0;z-index:2;border-bottom:2px solid var(--gradient-start)}#availability-table tbody th{background-color:#f8f9fa;color:var(--text-color);font-weight:600;position:sticky;left:0;z-index:1;border-right:2px solid var(--gradient-start)}#availability-table thead th:first-child{z-index:3!important;left:0;border-right:2px solid var(--gradient-start)}.available-slot{background-color:#e6f7ff;cursor:pointer}.available-slot:hover{background-color:#d0ebf7}.unavailable-slot{background-color:transparent;cursor:pointer}.unavailable-slot:hover{background-color:#f8f9fa}.confirmed-slot{background:linear-gradient(90deg,var(--gradient-start),var(--gradient-end))!important;color:var(--primary-text-on-gradient)!important;font-weight:700}.confirmed-slot .slot-actions,.confirmed-slot .participant-count{color:rgba(255,255,255,.9)!important;text-decoration-color:rgba(255,255,255,.9)!important}.slot-actions{font-size:.8em;cursor:pointer;color:var(--gradient-end);display:block;margin-top:calc(var(--spacing-unit)*.25);text-decoration:underline;text-decoration-color:var(--gradient-end)}.slot-actions:hover{color:var(--gradient-start);text-decoration-color:var(--gradient-start)}.participant-count{font-size:.75em;color:var(--text-muted-color);display:block;margin-top:calc(var(--spacing-unit)*.15)}#song-list ul{list-style-type:none;padding-left:0}#song-list li{background-color:var(--surface-color);padding:var(--spacing-unit);margin-bottom:var(--spacing-unit);border-radius:var(--border-radius);border-left:5px solid var(--gradient-start);transition:box-shadow .2s ease;box-shadow:var(--box-shadow)}#song-list li:hover{box-shadow:0 .25rem .75rem rgba(0,0,0,.1)}#song-list strong{font-size:1.15em;color:var(--text-color);font-weight:600}#song-list small{color:var(--text-muted-color);display:block;margin-top:calc(var(--spacing-unit)*.25)}#song-list a{color:var(--gradient-end);text-decoration:none;font-weight:500}#song-list a:hover{text-decoration:underline;filter:brightness(1.2)}#song-list button.delete-song-btn{padding:calc(var(--spacing-unit)*.4) calc(var(--spacing-unit)*.8);font-size:.8rem;margin-left:var(--spacing-unit)}
+        .equipment-list-item{display:flex;align-items:center;justify-content:space-between;margin-bottom:calc(var(--spacing-unit)*0.5)}.equipment-list-item label{margin-bottom:0}.equipment-list-item input{width:80px;margin-bottom:0}
+        @media(max-width:768px){.app-wrapper{padding:var(--spacing-unit)}.container{padding:var(--spacing-unit)}h1{font-size:1.75em}h2{font-size:1.4em}h3{font-size:1.2em}#main-app-header h2{font-size:1.2em}#menu-dropdown{width:calc(100% - var(--spacing-unit)*2);max-width:280px;top:70px}#add-song-btn{width:50px;height:50px;font-size:1.5rem;line-height:50px}.modal-content{padding:var(--spacing-unit);max-width:calc(100% - var(--spacing-unit)*2)}#availability-table{min-width:600px}#availability-table th,#availability-table td{padding:calc(var(--spacing-unit)*.5);font-size:.8rem;min-width:80px}}@media(max-width:480px){h1{font-size:1.5em}h2{font-size:1.25em}h3{font-size:1.05em}#availability-table{min-width:450px}#availability-table th,#availability-table td{padding:calc(var(--spacing-unit)*.4);font-size:.75rem;min-width:70px}}
+    </style>
+</head>
+<body>
+    <div class="app-wrapper">
+        <div id="registration-page" class="container page">
+            <h2>アカウント作成</h2>
+            <div id="reg-error-area" class="message-area error-message hidden"></div>
+            <label for="reg-login-id">ログインID</label>
+            <input type="text" id="reg-login-id" placeholder="例: user123" required>
+            <label for="reg-password">パスワード</label>
+            <div class="input-wrapper">
+                <input type="password" id="reg-password" placeholder="********" required>
+                <span class="password-toggle-icon" data-target="reg-password"></span>
+            </div>
+            <label for="reg-nickname">ニックネーム</label>
+            <input type="text" id="reg-nickname" placeholder="例: ギタリストTaro" required>
+            <label for="reg-circle-code">サークルコード</label>
+            <input type="text" id="reg-circle-code" placeholder="例: mybandcircle" required>
+            <button id="register-btn">登録する</button>
+            <hr>
+            <button id="show-login-page-btn" class="secondary">すでに登録済みの方はこちら</button>
+        </div>
+
+        <div id="login-page" class="container page hidden">
+            <h2>ログイン</h2>
+            <div id="login-error-area" class="message-area error-message hidden"></div>
+            <label for="login-id">ログインID</label>
+            <input type="text" id="login-id" placeholder="ログインID" required>
+            <label for="login-password">パスワード</label>
+            <div class="input-wrapper">
+                <input type="password" id="login-password" placeholder="パスワード" required>
+                <span class="password-toggle-icon" data-target="login-password"></span>
+            </div>
+            <label for="login-circle-code">サークルコード</label>
+            <input type="text" id="login-circle-code" placeholder="登録時のサークルコード" required>
+            <button id="login-btn">ログイン</button>
+            <hr>
+            <button id="show-registration-page-btn" class="secondary">新規作成はこちら</button>
+        </div>
+
+        <div id="main-app-page" class="page hidden">
+            <div id="main-app-header">
+                <h2 id="welcome-message"></h2>
+                <div id="hamburger-menu">≡</div>
+            </div>
+            <div id="menu-dropdown" class="hidden">
+                <button id="view-user-info-btn">登録情報を確認</button>
+                <button id="edit-user-info-btn">ニックネーム編集</button>
+                <button id="logout-btn" class="danger">ログアウト</button>
+            </div>
+            <div id="main-message-area" class="message-area info-message hidden"></div>
+            
+            <div id="view-user-info-modal" class="modal hidden">
+                <div class="modal-content">
+                    <button class="close-modal" data-modal-id="view-user-info-modal">&times;</button>
+                    <h3>登録情報</h3>
+                    <div class="info-item">
+                        <strong>ログインID</strong>
+                        <span id="view-login-id" class="info-value"></span>
+                    </div>
+                    <div class="info-item">
+                        <strong>パスワード</strong>
+                        <div class="password-view-wrapper">
+                            <input type="password" id="view-password-readonly" readonly class="info-value">
+                            <span class="password-toggle-icon" data-target="view-password-readonly"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="edit-user-info-modal" class="modal hidden">
+                 <div class="modal-content">
+                    <button class="close-modal" data-modal-id="edit-user-info-modal">&times;</button>
+                    <h3>ニックネーム編集</h3>
+                    <div id="edit-user-info-error-area" class="message-area error-message hidden"></div>
+                    <label for="edit-nickname">新しいニックネーム:</label>
+                    <input type="text" id="edit-nickname">
+                    <button id="save-user-info-btn" style="margin-top: var(--spacing-unit);">保存</button>
+                </div>
+            </div>
+
+            <div id="song-management-page" class="container">
+                <h3>曲リスト・日程調整</h3>
+                <div id="song-list"></div>
+            </div>
+            <div id="add-song-btn" title="新しい曲の日程調整を作成">+</div>
+            
+            <div id="create-song-modal" class="modal hidden">
+                <div class="modal-content">
+                    <button class="close-modal" data-modal-id="create-song-modal">&times;</button>
+                    <h3>新しい曲の日程調整を作成</h3>
+                    <div id="create-song-error-area" class="message-area error-message hidden"></div>
+                    <label for="song-name">曲名:</label>
+                    <input type="text" id="song-name" placeholder="曲名を入力">
+                    <label for="practice-period-start">練習期間（開始）:</label>
+                    <input type="date" id="practice-period-start">
+                    <label for="practice-period-end">練習期間（終了）:</label>
+                    <input type="date" id="practice-period-end">
+                    <button id="create-song-link-btn" style="margin-top: var(--spacing-unit);">作成</button>
+                    <div id="generated-link-area" class="hidden" style="margin-top: var(--spacing-unit);">
+                        <label>共有リンク:</label>
+                        <input type="text" id="generated-link" readonly style="background-color: #e9ecef;">
+                        <button id="copy-link-btn" class="secondary" style="margin-top: calc(var(--spacing-unit) * 0.5);">コピー</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="availability-input-page" class="container page hidden">
+            <h2 id="availability-song-title"></h2>
+            <p id="availability-period"></p>
+            <div id="availability-message-area" class="message-area info-message hidden"></div>
+            <div id="availability-controls" style="margin-bottom: var(--spacing-unit); display: flex; gap: var(--spacing-unit); flex-wrap: wrap;">
+                <button id="show-confirm-schedule-btn" class="hidden secondary">練習コマを確定モードへ</button>
+                <button id="save-availability-btn">空きコマを保存</button>
+                <button id="edit-availability-btn" class="hidden secondary">空きコマを編集</button>
+            </div>
+            <div id="availability-table-wrapper">
+                <table id="availability-table">
+                    <thead><tr id="availability-table-header"></tr></thead>
+                    <tbody id="availability-table-body"></tbody>
+                </table>
+            </div>
+            <hr>
+            <button id="back-to-song-list-btn" class="secondary">曲リストに戻る</button>
+
+            <div id="participant-list-modal" class="modal hidden">
+                <div class="modal-content">
+                    <button class="close-modal" data-modal-id="participant-list-modal">&times;</button>
+                    <h3 id="participant-list-modal-title">参加可能な人</h3>
+                    <ul id="participant-list-ul"></ul>
+                </div>
+            </div>
+
+            <div id="confirm-schedule-modal" class="modal hidden">
+                <div class="modal-content">
+                    <button class="close-modal" data-modal-id="confirm-schedule-modal">&times;</button>
+                    <h3 id="confirm-schedule-modal-title">練習コマを確定</h3>
+                    <div id="confirm-schedule-message-area" class="message-area error-message hidden"></div>
+                    <p>日時: <strong id="confirm-slot-datetime"></strong></p>
+                    <h4>使用機材 (在庫 各3)</h4>
+                    <div id="equipment-selection"></div>
+                    <div id="confirmation-warnings" class="message-area error-message hidden" style="margin-top:var(--spacing-unit);"></div>
+                    <div style="margin-top: var(--spacing-unit); display:flex; gap: var(--spacing-unit);">
+                        <button id="confirm-schedule-action-btn">このコマを練習日に確定</button>
+                        <button id="unconfirm-schedule-action-btn" class="danger hidden">このコマの確定を解除</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> 
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const PENDING_SONG_KEY = 'pendingSongRedirect';
+        const PENDING_CIRCLE_KEY = 'pendingCircleRedirect';
+        const APP_BASE_URL = window.location.origin + window.location.pathname;
+        const EQUIPMENT_LIST = { "スプハイ": 3, "キーボード": 3, "ベーアン": 3, "キューブアンプ": 3 };
+        const TIME_SLOTS = ["1限", "昼", "2限", "3限", "4限", "5限", "6限", "7限"];
+        let currentUser = null;
+        let currentCircleData = null;
+        let currentSongName = null;
+
+        // --- DOM要素の取得 ---
+        const pages = {
+            registration: document.getElementById('registration-page'),
+            login: document.getElementById('login-page'),
+            main: document.getElementById('main-app-page'),
+            availability: document.getElementById('availability-input-page')
+        };
+        const regForm = { id: document.getElementById('reg-login-id'), pass: document.getElementById('reg-password'), nick: document.getElementById('reg-nickname'), circle: document.getElementById('reg-circle-code'), btn: document.getElementById('register-btn'), error: document.getElementById('reg-error-area') };
+        const loginForm = { id: document.getElementById('login-id'), pass: document.getElementById('login-password'), circle: document.getElementById('login-circle-code'), btn: document.getElementById('login-btn'), error: document.getElementById('login-error-area') };
+        const mainElements = { welcome: document.getElementById('welcome-message'), menu: document.getElementById('hamburger-menu'), dropdown: document.getElementById('menu-dropdown'), msgArea: document.getElementById('main-message-area'), addBtn: document.getElementById('add-song-btn'), songList: document.getElementById('song-list') };
+        const menuButtons = { viewInfo: document.getElementById('view-user-info-btn'), editInfo: document.getElementById('edit-user-info-btn'), logout: document.getElementById('logout-btn') };
+        const viewInfoModal = { self: document.getElementById('view-user-info-modal'), id: document.getElementById('view-login-id'), pass: document.getElementById('view-password-readonly') };
+        const editInfoModal = { self: document.getElementById('edit-user-info-modal'), nick: document.getElementById('edit-nickname'), saveBtn: document.getElementById('save-user-info-btn'), error: document.getElementById('edit-user-info-error-area') };
+        const createSongModal = { self: document.getElementById('create-song-modal'), name: document.getElementById('song-name'), start: document.getElementById('practice-period-start'), end: document.getElementById('practice-period-end'), btn: document.getElementById('create-song-link-btn'), linkArea: document.getElementById('generated-link-area'), linkInput: document.getElementById('generated-link'), copyBtn: document.getElementById('copy-link-btn'), error: document.getElementById('create-song-error-area') };
+        const availabilityPageElements = { title: document.getElementById('availability-song-title'), period: document.getElementById('availability-period'), msgArea: document.getElementById('availability-message-area'), confirmModeBtn: document.getElementById('show-confirm-schedule-btn'), saveBtn: document.getElementById('save-availability-btn'), editBtn: document.getElementById('edit-availability-btn'), tableHeader: document.getElementById('availability-table-header'), tableBody: document.getElementById('availability-table-body'), backBtn: document.getElementById('back-to-song-list-btn') };
+        const participantModal = { self: document.getElementById('participant-list-modal'), title: document.getElementById('participant-list-modal-title'), list: document.getElementById('participant-list-ul') };
+        const confirmModal = { self: document.getElementById('confirm-schedule-modal'), title: document.getElementById('confirm-schedule-modal-title'), datetime: document.getElementById('confirm-slot-datetime'), equipment: document.getElementById('equipment-selection'), warnings: document.getElementById('confirmation-warnings'), confirmBtn: document.getElementById('confirm-schedule-action-btn'), unconfirmBtn: document.getElementById('unconfirm-schedule-action-btn') };
+
+        // --- 汎用ヘルパー関数 ---
+        const showModal = (modal) => { modal.classList.remove('hidden'); };
+        const hideModal = (modal) => { modal.classList.add('hidden'); };
+        const showPage = (page) => { Object.values(pages).forEach(p => p.classList.add('hidden')); page.classList.remove('hidden'); };
+        const displayMessage = (msg, type = 'error', area) => { area.textContent = msg; area.className = `message-area ${type}-message`; };
+        const clearMessage = (area) => { area.classList.add('hidden'); };
+        const getUserInfoFromStorage = () => JSON.parse(localStorage.getItem('scheduleAppUser'));
+        const saveUserInfoToStorage = (user) => localStorage.setItem('scheduleAppUser', JSON.stringify(user));
+        const getCircleDataFromStorage = (code) => JSON.parse(localStorage.getItem(`scheduleAppCircle_${code}`)) || { users: {}, songs: {} };
+        const saveCircleDataToStorage = (code, data) => localStorage.setItem(`scheduleAppCircle_${code}`, JSON.stringify(data));
+
+        // --- イベントリスナー設定 ---
+        function setupEventListeners() {
+            // パスワード表示切替
+            const eyeOpenSVG = `<svg viewBox="0 0 576 512" fill="currentColor"><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 158.8 0 222.8 0 288s48.6 129.2 95.4 175.4C142.5 507.2 207.2 544 288 544s145.5-36.8 192.6-80.6C527.4 417.2 576 353.2 576 288s-48.6-129.2-95.4-175.4C433.5 68.8 368.8 32 288 32zM432 288c0 26.5-21.5 48-48 48s-48-21.5-48-48 21.5-48 48-48 48 21.5 48 48zM144 288c-26.5 0-48-21.5-48-48s21.5-48 48-48 48 21.5 48 48-21.5 48-48 48z"/></svg>`;
+            const eyeClosedSVG = `<svg viewBox="0 0 640 512" fill="currentColor"><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6C570.5 208.2 539.2 156.2 492.5 112.8C448.2 68.8 383.5 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM288 448a160 160 0 0 1-160-160c0-11.2 1.1-22.2 3.3-32.8l59.4 46.5c-3.1 8.9-4.7 18.5-4.7 28.3c0 26.5 21.5 48 48 48h.4l59.3 46.4C322.2 446.9 305.5 448 288 448z"/></svg>`;
+            document.querySelectorAll('.password-toggle-icon').forEach(icon => {
+                icon.innerHTML = eyeOpenSVG;
+                icon.onclick = () => {
+                    const input = document.getElementById(icon.dataset.target);
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        icon.innerHTML = eyeClosedSVG;
+                    } else {
+                        input.type = 'password';
+                        icon.innerHTML = eyeOpenSVG;
+                    }
+                };
+            });
+
+            // モーダル閉じるボタン
+            document.querySelectorAll('.close-modal').forEach(btn => btn.onclick = () => hideModal(document.getElementById(btn.dataset.modalId)));
+            document.querySelectorAll('.modal').forEach(modal => modal.onclick = (e) => { if (e.target === modal) hideModal(modal); });
+            
+            // ページ遷移ボタン
+            document.getElementById('show-login-page-btn').onclick = () => showPage(pages.login);
+            document.getElementById('show-registration-page-btn').onclick = () => showPage(pages.registration);
+            
+            // 登録・ログイン
+            regForm.btn.onclick = handleRegistration;
+            loginForm.btn.onclick = handleLogin;
+            
+            // メインページ
+            mainElements.menu.onclick = () => mainElements.dropdown.classList.toggle('hidden');
+            document.addEventListener('click', (e) => { if (!mainElements.menu.contains(e.target) && !mainElements.dropdown.contains(e.target)) mainElements.dropdown.classList.add('hidden'); });
+            menuButtons.logout.onclick = () => { localStorage.removeItem('scheduleAppUser'); sessionStorage.clear(); location.reload(); };
+            menuButtons.viewInfo.onclick = showUserInfo;
+            menuButtons.editInfo.onclick = showEditInfo;
+            editInfoModal.saveBtn.onclick = saveNickname;
+            
+            mainElements.addBtn.onclick = () => {
+                createSongModal.self.querySelectorAll('input').forEach(i => i.value = '');
+                createSongModal.linkArea.classList.add('hidden');
+                clearMessage(createSongModal.error);
+                showModal(createSongModal.self);
+            };
+            createSongModal.btn.onclick = createSong;
+            createSongModal.copyBtn.onclick = () => navigator.clipboard.writeText(createSongModal.linkInput.value).then(() => displayMessage("コピーしました！", "info", createSongModal.error));
+        }
+
+        // --- コアロジック ---
+        function handleInitialLoad() {
+            setupEventListeners();
+            currentUser = getUserInfoFromStorage();
+            const urlParams = new URLSearchParams(window.location.search);
+            const songParam = urlParams.get('song');
+            const circleParam = urlParams.get('circle');
+
+            if (currentUser) {
+                loadUserAndDecidePage();
+            } else {
+                if (songParam && circleParam) {
+                    sessionStorage.setItem(PENDING_SONG_KEY, songParam);
+                    sessionStorage.setItem(PENDING_CIRCLE_KEY, circleParam);
+                    displayMessage("このコンテンツを表示するにはログインまたは登録が必要です。", "info", loginForm.error);
+                    loginForm.circle.value = decodeURIComponent(circleParam);
+                    showPage(pages.login); 
+                } else {
+                    showPage(pages.registration);
+                }
+            }
+        }
+
+        function loadUserAndDecidePage() {
+            currentCircleData = getCircleDataFromStorage(currentUser.circleCode);
+            if (!currentCircleData.users[currentUser.loginId]) {
+                currentCircleData.users[currentUser.loginId] = { nickname: currentUser.nickname, password: currentUser.password };
+                saveCircleDataToStorage(currentUser.circleCode, currentCircleData);
+            }
+            const pendingSong = sessionStorage.getItem(PENDING_SONG_KEY);
+            const pendingCircle = sessionStorage.getItem(PENDING_CIRCLE_KEY);
+
+            if (pendingSong && pendingCircle && pendingCircle === currentUser.circleCode) {
+                currentSongName = decodeURIComponent(pendingSong);
+                sessionStorage.removeItem(PENDING_SONG_KEY);
+                sessionStorage.removeItem(PENDING_CIRCLE_KEY);
+                loadAvailabilityPage(currentSongName);
+            } else {
+                loadMainAppPage();
+            }
+        }
+        
+        function handleRegistration() {
+            clearMessage(regForm.error);
+            const [id, pass, nick, circle] = [regForm.id.value.trim(), regForm.pass.value, regForm.nick.value.trim(), regForm.circle.value.trim()];
+            if (!id || !pass || !nick || !circle) { displayMessage("すべての項目を入力してください。", "error", regForm.error); return; }
+            
+            const tempCircleData = getCircleDataFromStorage(circle);
+            if (tempCircleData.users[id]) { displayMessage("このログインIDはサークル内で既に使用されています。", "error", regForm.error); return; }
+            
+            currentUser = { loginId: id, password: pass, nickname: nick, circleCode: circle };
+            saveUserInfoToStorage(currentUser);
+            currentCircleData = tempCircleData;
+            currentCircleData.users[id] = { nickname: nick, password: pass };
+            saveCircleDataToStorage(circle, currentCircleData);
+            loadUserAndDecidePage();
+        }
+
+        function handleLogin() {
+            clearMessage(loginForm.error);
+            const [id, pass, circle] = [loginForm.id.value.trim(), loginForm.pass.value, loginForm.circle.value.trim()];
+            if (!id || !pass || !circle) { displayMessage("すべての項目を入力してください。", "error", loginForm.error); return; }
+            
+            const targetCircleData = getCircleDataFromStorage(circle);
+            if (!targetCircleData?.users?.[id]) { displayMessage("ログインIDまたはサークルコードが正しくないか、ユーザーが存在しません。", "error", loginForm.error); return; }
+            if (targetCircleData.users[id].password !== pass) { displayMessage("パスワードが正しくありません。", "error", loginForm.error); return; }
+
+            currentUser = { loginId: id, password: pass, nickname: targetCircleData.users[id].nickname, circleCode: circle };
+            saveUserInfoToStorage(currentUser);
+            loadUserAndDecidePage();
+        }
+
+        function loadMainAppPage() {
+            mainElements.welcome.innerHTML = `ようこそ、 <strong>${currentUser.nickname}</strong> さん！ (サークル: <strong>${currentUser.circleCode}</strong>)`;
+            showPage(pages.main);
+            renderSongList();
+            if (window.location.search) { window.history.replaceState({}, document.title, window.location.pathname); }
+        }
+        
+        function showUserInfo() {
+            viewInfoModal.id.textContent = currentUser.loginId;
+            viewInfoModal.pass.value = currentUser.password;
+            viewInfoModal.pass.type = 'password';
+            viewInfoModal.self.querySelector('.password-toggle-icon').innerHTML = eyeOpenSVG;
+            mainElements.dropdown.classList.add('hidden');
+            showModal(viewInfoModal.self);
+        }
+        
+        function showEditInfo() {
+            editInfoModal.nick.value = currentUser.nickname;
+            clearMessage(editInfoModal.error);
+            mainElements.dropdown.classList.add('hidden');
+            showModal(editInfoModal.self);
+        }
+        
+        function saveNickname() {
+            const newNick = editInfoModal.nick.value.trim();
+            if(!newNick) { displayMessage("ニックネームを入力してください。", "error", editInfoModal.error); return; }
+
+            currentUser.nickname = newNick;
+            currentCircleData.users[currentUser.loginId].nickname = newNick;
+            saveUserInfoToStorage(currentUser);
+            saveCircleDataToStorage(currentUser.circleCode, currentCircleData);
+            
+            mainElements.welcome.innerHTML = `ようこそ、 <strong>${currentUser.nickname}</strong> さん！ (サークル: <strong>${currentUser.circleCode}</strong>)`;
+            renderSongList();
+            hideModal(editInfoModal.self);
+            displayMessage("ニックネームを更新しました。", "info", mainElements.msgArea);
+        }
+
+        function createSong() {
+            clearMessage(createSongModal.error);
+            const [name, start, end] = [createSongModal.name.value.trim(), createSongModal.start.value, createSongModal.end.value];
+            if (!name || !start || !end) { displayMessage("すべての項目を入力してください。", "error", createSongModal.error); return; }
+            if (new Date(start) > new Date(end)) { displayMessage("期間の終了日は開始日より後に設定してください。", "error", createSongModal.error); return; }
+            if (currentCircleData.songs[name]) { displayMessage("同じ曲名が既に存在します。", "error", createSongModal.error); return; }
+
+            currentCircleData.songs[name] = { creator: currentUser.loginId, period: { start, end }, availability: {}, confirmedSlots: {} };
+            saveCircleDataToStorage(currentUser.circleCode, currentCircleData);
+
+            const link = `${APP_BASE_URL}?circle=${encodeURIComponent(currentUser.circleCode)}&song=${encodeURIComponent(name)}`;
+            createSongModal.linkInput.value = link;
+            createSongModal.linkArea.classList.remove('hidden');
+            renderSongList();
+        }
+
+        function renderSongList() {
+            const songs = currentCircleData.songs;
+            if (!songs || Object.keys(songs).length === 0) {
+                mainElements.songList.innerHTML = "<p style='text-align:center; color: var(--text-muted-color);'>まだ日程調整中の曲はありません。「＋」ボタンから作成できます。</p>";
+                return;
+            }
+            // (renderSongList の詳細なHTML生成部分は変更なしのため省略)
+        }
+
+        function loadAvailabilityPage(songName) {
+            if (!currentCircleData?.songs?.[songName]) {
+                displayMessage("指定された曲の情報が見つからないか、アクセス権がありません。", "error", mainElements.msgArea);
+                loadMainAppPage();
+                return;
+            }
+            // (loadAvailabilityPage の詳細なロジックは変更なしのため省略)
+            currentSongName = songName;
+            // ... ページ描画ロジック ...
+            showPage(pages.availability);
+        }
+
+        // アプリケーションの初期化
+        handleInitialLoad();
+    });
+    </script>
+</body>
+</html>
